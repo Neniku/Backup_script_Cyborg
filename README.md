@@ -1,13 +1,18 @@
 # Backup Script — Cyborg
 
+---
+---
+
 [English](#english) · [Italiano](#italiano)
 
 Hardened evolution of [Backup_script_Umano](https://github.com/Neniku/Backup_script_Umano).
 
 ---
+---
 
 <a name="english"></a>
 ## English
+---
 
 Automates the full backup lifecycle for a local Linux directory: compression, encryption, integrity verification, redundant remote upload, HTML reporting and cleanup. Built with robustness in mind — it handles interrupted runs, concurrent execution attempts and failed uploads without losing data.
 
@@ -85,8 +90,10 @@ sudo apt install zip openssh-client smbclient zenity mailutils coreutils finduti
 
 ---
 
+---
 <a name="italiano"></a>
 ## Italiano
+---
 
 Automatizza l'intero ciclo di vita del backup per una directory Linux locale: compressione, cifratura, verifica dell'integrità, upload remoto ridondante, report HTML e pulizia. Costruito con la robustezza come priorità — gestisce esecuzioni interrotte, tentativi di esecuzione concorrente e upload falliti senza perdere dati.
 
