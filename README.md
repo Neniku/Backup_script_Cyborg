@@ -1,7 +1,6 @@
 # Backup Script — Cyborg
 
 ---
----
 
 [English](#english) · [Italiano](#italiano)
 
