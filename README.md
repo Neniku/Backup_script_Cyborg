@@ -1,15 +1,17 @@
 # Backup Script — Cyborg
 
-Hardened evolution of [Backup_script_Umano](https://github.com/Neniku/Backup_script_Umano).
-
-Automates the full backup lifecycle for a local Linux directory: compression, encryption, integrity verification, redundant remote upload, HTML reporting and cleanup. Built with robustness in mind — it handles interrupted runs, concurrent execution attempts and failed uploads without losing data.
-
 [English](#english) · [Italiano](#italiano)
+
+Hardened evolution of [Backup_script_Umano](https://github.com/Neniku/Backup_script_Umano).
 
 ---
 
 <a name="english"></a>
 ## English
+
+Automates the full backup lifecycle for a local Linux directory: compression, encryption, integrity verification, redundant remote upload, HTML reporting and cleanup. Built with robustness in mind — it handles interrupted runs, concurrent execution attempts and failed uploads without losing data.
+
+---
 
 ### What it does
 
@@ -20,7 +22,9 @@ Automates the full backup lifecycle for a local Linux directory: compression, en
 5. Generates an HTML report and sends it via email
 6. Removes local archives after successful upload
 
-### Key features
+---
+
+### Features
 
 | Feature | Details |
 |---|---|
@@ -31,6 +35,8 @@ Automates the full backup lifecycle for a local Linux directory: compression, en
 | Concurrency | Lock file prevents simultaneous executions |
 | Interface | CLI and GUI mode via Zenity |
 | Reporting | HTML report sent via email |
+
+---
 
 ### Usage
 
@@ -46,13 +52,17 @@ Automates the full backup lifecycle for a local Linux directory: compression, en
 ./Cyborg_V1.sh --cleanup-locks
 ```
 
-> Note: avoid passing passwords directly on the command line in production environments — they can appear in process listings and shell history. Prefer interactive mode or environment variables.
+> Avoid passing passwords directly on the command line in production — they can appear in process listings and shell history. Prefer interactive mode or environment variables.
+
+---
 
 ### Requirements
 
 ```bash
 sudo apt install zip openssh-client smbclient zenity mailutils coreutils findutils
 ```
+
+---
 
 ### vs. Umano (v1)
 
@@ -63,6 +73,8 @@ sudo apt install zip openssh-client smbclient zenity mailutils coreutils finduti
 | Remote destinations | FTP or SMB | SFTP + SMB |
 | Recovery | No | Checkpoint and retry |
 | Report | Plain text | HTML + email |
+
+---
 
 ### Security notes
 
@@ -76,6 +88,10 @@ sudo apt install zip openssh-client smbclient zenity mailutils coreutils finduti
 <a name="italiano"></a>
 ## Italiano
 
+Automatizza l'intero ciclo di vita del backup per una directory Linux locale: compressione, cifratura, verifica dell'integrità, upload remoto ridondante, report HTML e pulizia. Costruito con la robustezza come priorità — gestisce esecuzioni interrotte, tentativi di esecuzione concorrente e upload falliti senza perdere dati.
+
+---
+
 ### Cosa fa
 
 1. Archivia ricorsivamente la directory sorgente (inclusi i file nascosti) in archivi ZIP suddivisi
@@ -85,7 +101,9 @@ sudo apt install zip openssh-client smbclient zenity mailutils coreutils finduti
 5. Genera un report HTML e lo invia via email
 6. Rimuove gli archivi locali dopo l'upload completato
 
-### Funzionalità principali
+---
+
+### Funzionalità
 
 | Funzionalità | Dettagli |
 |---|---|
@@ -96,6 +114,8 @@ sudo apt install zip openssh-client smbclient zenity mailutils coreutils finduti
 | Concorrenza | Lock file impedisce esecuzioni simultanee |
 | Interfaccia | Modalità CLI e GUI tramite Zenity |
 | Report | Report HTML inviato via email |
+
+---
 
 ### Utilizzo
 
@@ -111,13 +131,17 @@ sudo apt install zip openssh-client smbclient zenity mailutils coreutils finduti
 ./Cyborg_V1.sh --cleanup-locks
 ```
 
-> Nota: evitare di passare la password direttamente da riga di comando in ambienti di produzione — può apparire nel listato dei processi e nella history della shell. Preferire la modalità interattiva o le variabili d'ambiente.
+> Evitare di passare la password direttamente da riga di comando in produzione — può apparire nel listato dei processi e nella history della shell. Preferire la modalità interattiva o le variabili d'ambiente.
+
+---
 
 ### Requisiti
 
 ```bash
 sudo apt install zip openssh-client smbclient zenity mailutils coreutils findutils
 ```
+
+---
 
 ### vs. Umano (v1)
 
@@ -128,6 +152,8 @@ sudo apt install zip openssh-client smbclient zenity mailutils coreutils finduti
 | Destinazioni remote | FTP o SMB | SFTP + SMB |
 | Recovery | No | Checkpoint e retry |
 | Report | Testo semplice | HTML + email |
+
+---
 
 ### Note di sicurezza
 
