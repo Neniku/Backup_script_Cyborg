@@ -8,7 +8,6 @@
 Hardened evolution of [Backup_script_Umano](https://github.com/Neniku/Backup_script_Umano).
 
 ---
----
 
 <a name="english"></a>
 ## English
@@ -87,8 +86,6 @@ sudo apt install zip openssh-client smbclient zenity mailutils coreutils finduti
 - SFTP used instead of FTP for encrypted transport
 - Lock file prevents race conditions on concurrent runs
 - Known limitation: password currently included in the report — separating secrets from reports is a planned improvement
-
----
 
 ---
 <a name="italiano"></a>
