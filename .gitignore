@@ -1,0 +1,29 @@
+# logs
+*.log
+
+# temporary backup archives
+*.zip
+
+# runtime files
+*.lock
+*.lock.pid
+.backup_locks/
+.backup_logs/
+
+# editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# macOS
+.DS_Store
+
+# credentials — never commit these
+.env
+.env.*
+secrets.sh
+credentials.sh
+secrets/*
+!secrets/config.env.example
+!secrets/.gitkeep
