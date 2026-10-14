@@ -94,18 +94,25 @@ jobs:
       - name: Extract changelog for this tag
         id: notes
         run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          TAG_CLEAN="${TAG#v}"
-          notes=""
-          if [ -f CHANGELOG.md ]; then
-            notes=$(awk "/^## \[(v?)$TAG_CLEAN\]/,/^## \[/" CHANGELOG.md | head -n -1 | tail -n +2)
-          fi
-          if [ -z "$notes" ]; then
-            notes="Release $TAG — Refactoring completo e snellimento script"
-          fi
-          echo "notes<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$notes"   >> "$GITHUB_OUTPUT"
-          echo "EOF"      >> "$GITHUB_OUTPUT"
+          python3 -c '
+          import os, re
+          tag = os.environ.get("TAG", "")
+          clean_tag = tag.lstrip("v")
+          notes = ""
+          if os.path.exists("CHANGELOG.md"):
+              with open("CHANGELOG.md", "r", encoding="utf-8") as f:
+                  content = f.read()
+              pattern = rf"## \[(?:v)?{re.escape(clean_tag)}\][^\n]*\n(.*?)(?=\n## \[|\Z)"
+              m = re.search(pattern, content, re.DOTALL)
+              if m:
+                  notes = m.group(1).strip()
+          if not notes:
+              notes = f"Release {tag} — Refactoring e miglioramenti"
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write("notes<<EOF\n" + notes + "\nEOF\n")
+          '
+        env:
+          TAG: ${{ github.ref_name }}
 
       - name: Package
         run: |
