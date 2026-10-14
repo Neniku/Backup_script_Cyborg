@@ -7,7 +7,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — [Semantic V
 
 ## [Unreleased]
 
+---
+
+## [0.3] - 2026-10-15
+
 ### Added
+- Nuovo script unificato `Backup_Cyborg.sh` (ridotto da 2850 a 830 righe, -70% di codice)
+- Supporto invio email con `curl SMTP` nativo (nessun client o MTA locale richiesto)
+- Protezione e cifratura locale dei log e del report HTML in archivio `.zip` protetto da `LOG_PASSWORD`
+- Supporto completo autenticazione SFTP con chiave privata SSH (`SSH_KEY_PATH`)
+- Scansione automatica dei segreti con Gitleaks e CI GitHub Actions
+- Guida all'uso `--help` formattata e supporto opzione `-v, --version`
+
 - GitHub Actions CI: shellcheck linting, syntax validation, smoke test, auto-release on tags
 - `.gitignore`
 - `CHANGELOG.md`
