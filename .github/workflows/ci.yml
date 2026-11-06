@@ -25,7 +25,7 @@ jobs:
       - name: Run shellcheck
         run: |
           shellcheck --shell=bash --severity=warning \
-            Backup_Cyborg.sh
+            Backup_Cyborg.sh requirements.sh
 
   syntax:
     name: Syntax check
@@ -48,22 +48,46 @@ jobs:
           done < <(find . -name "*.sh" -not -path "./.git/*" -print0)
 
   smoke-test:
-    name: Smoke test (--help)
+    name: Smoke & Functional Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install dependencies via requirements.sh
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends \
-            zip openssh-client smbclient mailutils
+          chmod +x requirements.sh Backup_Cyborg.sh
+          sudo ./requirements.sh
+          ./requirements.sh
 
-      - name: Make executable
-        run: chmod +x Backup_Cyborg.sh
+      - name: CLI flags (--help, --version, --cleanup-locks)
+        run: |
+          ./Backup_Cyborg.sh --help
+          ./Backup_Cyborg.sh --version
+          ./Backup_Cyborg.sh --cleanup-locks
 
-      - name: --help
-        run: ./Backup_Cyborg.sh --help
+      - name: Functional test (AES-256 zip, diario-backup.log manifest, SHA-256, cleanup)
+        run: |
+          bash -c '
+            source <(sed "s/^main \"\$@\"/# main/" Backup_Cyborg.sh)
+            TEMP_DIR=$(mktemp -d)
+            SOURCE_DIR=$(mktemp -d)
+            LOG_DIR=$(mktemp -d)
+            LOG_FILE="$TEMP_DIR/diario-backup.log"
+            BACKUP_NAME="ci_backup"
+            FILE_TIMESTAMP="2026_ci"
+            LOG_PASSWORD="TestLogPassword123!"
+            dd if=/dev/urandom of="$SOURCE_DIR/sample.bin" bs=1M count=1 status=none
+            echo "cyborg test" > "$SOURCE_DIR/documento.txt"
+            check_requirements
+            core_create_encrypted_backup
+            [ "${#ENCRYPTION_PASSWORD}" -eq 24 ] || exit 1
+            [ "$HASH_COUNT" -ge 1 ] || exit 1
+            grep -q "documento.txt" "$LOG_FILE" || exit 1
+            generate_enhanced_html_report
+            finalize_local_logs
+            cleanup_local_archives
+            rm -rf "$TEMP_DIR" "$SOURCE_DIR" "$LOG_DIR"
+          '
 
       - name: Startup without crash
         run: timeout 5 ./Backup_Cyborg.sh --cli 2>&1 | head -20 || true
@@ -117,8 +141,8 @@ jobs:
       - name: Package
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
-          chmod +x Backup_Cyborg.sh
-          tar -czf "cyborg-backup-${TAG}.tar.gz" Backup_Cyborg.sh README.md LICENSE CHANGELOG.md
+          chmod +x Backup_Cyborg.sh requirements.sh
+          tar -czf "cyborg-backup-${TAG}.tar.gz" Backup_Cyborg.sh requirements.sh README.md LICENSE CHANGELOG.md
 
       - name: Create release
         uses: softprops/action-gh-release@v2
@@ -128,6 +152,7 @@ jobs:
           files: |
             cyborg-backup-${{ github.ref_name }}.tar.gz
             Backup_Cyborg.sh
+            requirements.sh
           prerelease: ${{ contains(github.ref_name, '-') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
