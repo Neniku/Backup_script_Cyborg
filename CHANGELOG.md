@@ -1,34 +1,20 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
-Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — [Semantic Versioning](https://semver.org/)
-
----
-
-## [Unreleased]
+Tutte le modifiche principali fatte allo script nel tempo.
 
 ---
 
 ## [0.5] - 2026-11-06
 
-### Added
-- Nuovo script **`requirements.sh`** per verificare e installare automaticamente (`sudo ./requirements.sh`) tutte le dipendenze necessarie al client su Arch/Garuda (`pacman`), Debian/Ubuntu (`apt-get`), Fedora/RHEL (`dnf`) e openSUSE (`zypper`)
-- Controllo bloccante **`check_requirements`** all'avvio di `Backup_Cyborg.sh`: lo script verifica la presenza di tutti i binari richiesti (`7z`, `zip`, `sha256sum`, `openssl`, `curl`, `sftp`, `scp`, `ssh-keygen`, `sshpass`, `smbclient`, `zenity`) prima di partire
-- Cifratura simmetrica reale **AES-256** (standard WinZip AE-2 tramite `7z a -tzip -mem=AES256`) per i volumi `.zip` e per l'archivio dei log locali, con suddivisione automatica multi-volume oltre la soglia configurata
-- Generazione del file **`diario-backup.log`** con il manifesto ricorsivo completo di tutti i file (`[FILE]` + dimensione in byte) e le directory (`[DIR]`) inclusi nell'archivio
-- Allegato automatico di **`diario-backup.log`** (MIME `multipart/mixed`) insieme al report HTML nell'email inviata al sysadmin tramite `curl SMTP`, `sendmail` o `mail`
-- Rilevamento automatico delle chiavi crittografiche **ECC** (`~/.ssh/id_ed25519` e `~/.ssh/id_ecdsa`) per SFTP (`PubkeyAcceptedAlgorithms`) e supporto `sshpass` per autenticazione a password (compatibilità traccia Umana)
-- Firma digitale obbligatoria dei pacchetti SMB (`--signing=required` / `SMB_SIGNING`) con negoziazione automatica del protocollo (retrocompatibile SMB3/SMB2) e passaggio password tramite variabile d'ambiente `PASSWD` (invisibile in `ps aux`)
-- Supporto completo al 5° parametro posizionale CLI (`ftp`, `sftp`, `smb`, `both` oppure indirizzo email) più 6° parametro opzionale per l'email
-
-### Changed
-- Snellimento e pulizia generale del codice di `Backup_Cyborg.sh` (unificazione helper SSH/SFTP/SCP e ricerca volumi tramite `find_backup_archives`)
-- Aggiornata pipeline GitHub Actions CI (`ci.yml`) con linting ShellCheck anche su `requirements.sh`, test di installazione dipendenze e test funzionale completo di cifratura AES-256 e generazione `diario-backup.log`
-
-### Fixed
-- Corretto generatore di password casuali (`generate_random_password`): sostituito il filtro `-base64` (che impediva l'uscita dei caratteri speciali) con uno schema CSPRNG strutturato a 24 caratteri (4 maiuscole, 4 minuscole, 4 cifre, 4 simboli speciali e 8 caratteri misti permutati casualmente)
-- Eliminazione immediata e tracciata in `diario-backup.log` dei volumi temporanei sul client subito dopo l'upload (`cleanup_local_archives`)
-- Corretta indicizzazione dei parametri posizionali in `process_params` (non vengono più sfalsati se `secrets/config.env` è presente) e aggiunta validazione IP/email anche in modalità GUI Zenity (`--gui`)
+### Cosa cambia
+- Aggiunto `requirements.sh` per controllare al volo se mancano pacchetti sul client e installarli direttamente lanciandolo con `sudo` (supporta Arch/Garuda, Debian/Ubuntu, Fedora e openSUSE). Se manca qualcosa, `Backup_Cyborg.sh` ora si ferma subito all'avvio.
+- Passato definitivamente a `7z` per creare i `.zip` (tolti `zip` e `openssl` che erano ridondanti): il vecchio comando `zip -e` di Linux usava ZipCrypto, mentre con `7z -tzip -mem=AES256` i volumi `.zip` e i log locali sono cifrati davvero in AES-256.
+- Sistemato il file di log come richiesto dalla consegna: ora si chiama `diario-backup.log`, salva al suo interno l'elenco completo di tutte le cartelle e i file inseriti nel backup e viene allegato direttamente alla mail inviata al sysadmin.
+- Pulizia immediata sul client: appena finisce l'upload sul server, gli archivi `.zip` temporanei vengono cancellati subito dal PC locale prima di chiudere il log.
+- Migliorata la gestione di SFTP e SMB:
+  - Per SFTP cerca da solo le chiavi ECC (`id_ed25519` o `id_ecdsa`), e se invece si usa la password (modalità Umana) passa da `sshpass` senza bloccarsi a chiedere l'input a terminale.
+  - Per SMB attivata la firma digitale dei pacchetti (`--signing=required`) lasciando la negoziazione automatica tra SMB3 e SMB2 per non avere problemi di compatibilità con server Windows più vecchi, e nascosta la password dai processi (`PASSWD`).
+- Sistemato il generatore delle password casuali a 24 caratteri (prima con `-base64` non uscivano mai i caratteri speciali) e corretto l'ordine dei 5 parametri passati da riga di comando.
 
 ---
 
@@ -68,8 +54,3 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — [Semantic V
 - Lock file to prevent concurrent executions
 - CLI and GUI (Zenity) modes
 - HTML email report
-
-[Unreleased]: https://github.com/Neniku/Backup_script_Cyborg/compare/0.5...HEAD
-[0.5]: https://github.com/Neniku/Backup_script_Cyborg/compare/0.3...0.5
-[0.3]: https://github.com/Neniku/Backup_script_Cyborg/releases/tag/0.3
-[1.0.0]: https://github.com/Neniku/Backup_script_Cyborg/releases/tag/v1.0.0

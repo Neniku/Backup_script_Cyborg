@@ -188,11 +188,7 @@ finalize_local_logs() {
             [ -f "diario-backup.log" ] && files_to_zip+=("diario-backup.log")
             [ -f "backup_report.html" ] && files_to_zip+=("backup_report.html")
             if [ ${#files_to_zip[@]} -gt 0 ]; then
-                if command -v 7z >/dev/null 2>&1; then
-                    7z a -tzip -mem=AES256 -mx=5 -p"$LOG_PASSWORD" "$dest_zip" "${files_to_zip[@]}" >/dev/null 2>&1
-                else
-                    zip -q -j -e -P "$LOG_PASSWORD" "$dest_zip" "${files_to_zip[@]}"
-                fi
+                7z a -tzip -mem=AES256 -mx=5 -p"$LOG_PASSWORD" "$dest_zip" "${files_to_zip[@]}" >/dev/null 2>&1
                 chmod 600 "$dest_zip" 2>/dev/null || true
             fi
         )
@@ -280,23 +276,13 @@ core_create_encrypted_backup() {
     log_archived_manifest
 
     local zip_out="${TEMP_DIR}/${BACKUP_NAME}.zip"
+    local split_args=()
+    [ "$TOTAL_SOURCE_SIZE_MB" -ge "$MAX_ARCHIVE_SIZE" ] && split_args=("-v${MAX_ARCHIVE_SIZE}m")
 
-    if command -v 7z >/dev/null 2>&1; then
-        CIPHER_USED="AES-256 (ZIP WinZip AE-2)"
-        local split_args=()
-        [ "$TOTAL_SOURCE_SIZE_MB" -ge "$MAX_ARCHIVE_SIZE" ] && split_args=("-v${MAX_ARCHIVE_SIZE}m")
-        if ! (cd "$parent_dir" && 7z a -tzip -mem=AES256 -mx=5 -p"$ENCRYPTION_PASSWORD" "${split_args[@]}" "$zip_out" "$source_name" >/dev/null 2>&1); then
-            log_error "Creazione archivio ZIP AES-256 con 7z fallita."
-            FATAL_ERROR=true
-            return 1
-        fi
-    else
-        CIPHER_USED="ZIP Standard (Info-ZIP)"
-        if ! (cd "$parent_dir" && zip -q -r -e -P "$ENCRYPTION_PASSWORD" -s "${MAX_ARCHIVE_SIZE}m" "$zip_out" "$source_name"); then
-            log_error "Creazione archivio ZIP cifrato fallita."
-            FATAL_ERROR=true
-            return 1
-        fi
+    if ! (cd "$parent_dir" && 7z a -tzip -mem=AES256 -mx=5 -p"$ENCRYPTION_PASSWORD" "${split_args[@]}" "$zip_out" "$source_name" >/dev/null 2>&1); then
+        log_error "Creazione archivio ZIP AES-256 con 7z fallita."
+        FATAL_ERROR=true
+        return 1
     fi
 
     calculate_sha256_hashes
@@ -725,7 +711,7 @@ gui_collect_params() {
 # 7. Verifica Requisiti, Esecuzione del Backup e Entrypoint
 # ------------------------------------------------------------------------------
 check_requirements() {
-    local req_cmds=("7z" "zip" "sha256sum" "openssl" "curl" "sftp" "scp" "ssh-keygen" "sshpass" "smbclient")
+    local req_cmds=("7z" "sha256sum" "curl" "sftp" "scp" "ssh-keygen" "sshpass" "smbclient")
     [ "$INTERFACE_MODE" = "gui" ] && req_cmds+=("zenity")
 
     local missing=()

@@ -5,18 +5,15 @@
 # requirements.sh — Verifica e installazione dipendenze per Backup_Cyborg.sh
 # ==============================================================================
 # Utilizzo:
-#   ./requirements.sh           # Verifica se tutti i requisiti sono presenti
-#   sudo ./requirements.sh      # Installa automaticamente i pacchetti mancanti
+#   ./requirements.sh           # Controlla se c'è tutto
+#   sudo ./requirements.sh      # Installa in automatico quello che manca
 # ==============================================================================
 
 set -uo pipefail
 
-# Mappa comandi richiesti da Backup_Cyborg.sh
 REQUIRED_CMDS=(
     "7z"
-    "zip"
     "sha256sum"
-    "openssl"
     "curl"
     "sftp"
     "scp"
@@ -25,6 +22,21 @@ REQUIRED_CMDS=(
     "smbclient"
     "zenity"
 )
+
+cmd_description() {
+    case "$1" in
+        7z)         echo "Cifratura archivi .zip in AES-256 e divisione in volumi" ;;
+        sha256sum)  echo "Calcolo hash SHA-256 dei file di backup" ;;
+        curl)       echo "Invio email report diretto via SMTP" ;;
+        sftp)       echo "Creazione cartelle e test connessione SFTP" ;;
+        scp)        echo "Trasferimento file verso il server SFTP" ;;
+        ssh-keygen) echo "Verifica chiavi SSH ECC (Ed25519 / ECDSA)" ;;
+        sshpass)    echo "Passaggio password automatico a SFTP/SCP (modalità Umana)" ;;
+        smbclient)  echo "Upload su cartella condivisa SMB con firma digitale" ;;
+        zenity)     echo "Finestre per l'interfaccia grafica (--gui)" ;;
+        *)          echo "" ;;
+    esac
+}
 
 check_missing_cmds() {
     MISSING_CMDS=()
@@ -36,12 +48,14 @@ check_missing_cmds() {
 }
 
 print_status() {
-    echo "=== Verifica Requisiti Backup_Cyborg.sh ==="
+    echo "=== Controllo dipendenze per Backup_Cyborg.sh ==="
     for cmd in "${REQUIRED_CMDS[@]}"; do
+        local desc
+        desc="$(cmd_description "$cmd")"
         if command -v "$cmd" >/dev/null 2>&1; then
-            printf "  \e[32m[OK]\e[0m       %-12s (%s)\n" "$cmd" "$(command -v "$cmd")"
+            printf "  \e[32m[OK]\e[0m       %-11s — %s\n" "$cmd" "$desc"
         else
-            printf "  \e[31m[MANCANTE]\e[0m %-12s\n" "$cmd"
+            printf "  \e[31m[MANCANTE]\e[0m %-11s — %s\n" "$cmd" "$desc"
         fi
     done
     echo ""
@@ -49,33 +63,29 @@ print_status() {
 
 install_packages() {
     if [ "$(id -u)" -ne 0 ]; then
-        echo -e "\e[31mERRORE: Per installare i pacchetti mancanti esegui questo script con sudo:\e[0m" >&2
+        echo -e "\e[31mPer installare i pacchetti mancanti lancia lo script con sudo:\e[0m" >&2
         echo "  sudo ./requirements.sh" >&2
         exit 1
     fi
 
-    echo "Installazione automatica delle dipendenze in corso..."
+    echo "Installazione dei pacchetti mancanti in corso..."
 
     if command -v pacman >/dev/null 2>&1; then
-        # Arch Linux / Garuda Linux / Manjaro / CachyOS
         pacman -Sy --needed --noconfirm \
-            7zip zip coreutils findutils openssl curl openssh sshpass smbclient zenity
+            7zip coreutils findutils curl openssh sshpass smbclient zenity
     elif command -v apt-get >/dev/null 2>&1; then
-        # Debian / Ubuntu / Linux Mint / Kali
         export DEBIAN_FRONTEND=noninteractive
         apt-get update -qq
         apt-get install -y --no-install-recommends \
-            p7zip-full zip coreutils findutils openssl curl openssh-client sshpass smbclient zenity
+            p7zip-full coreutils findutils curl openssh-client sshpass smbclient zenity
     elif command -v dnf >/dev/null 2>&1; then
-        # Fedora / RHEL / Rocky / AlmaLinux
         dnf install -y \
-            p7zip p7zip-plugins zip coreutils findutils openssl curl openssh-clients sshpass samba-client zenity
+            p7zip p7zip-plugins coreutils findutils curl openssh-clients sshpass samba-client zenity
     elif command -v zypper >/dev/null 2>&1; then
-        # openSUSE
         zypper --non-interactive install \
-            p7zip-full zip coreutils findutils openssl curl openssh sshpass samba-client zenity
+            p7zip-full coreutils findutils curl openssh sshpass samba-client zenity
     else
-        echo "ERRORE: Gestore pacchetti non riconosciuto. Installa manualmente: ${MISSING_CMDS[*]}" >&2
+        echo "Gestore pacchetti non supportato. Installa manualmente: ${MISSING_CMDS[*]}" >&2
         exit 1
     fi
 }
@@ -94,11 +104,11 @@ main() {
     print_status
 
     if [ ${#MISSING_CMDS[@]} -eq 0 ]; then
-        echo -e "\e[32mTutti i requisiti sono soddisfatti! Backup_Cyborg.sh è pronto all'uso.\e[0m"
+        echo -e "\e[32mTutto installato, puoi lanciare Backup_Cyborg.sh.\e[0m"
         exit 0
     fi
 
-    echo -e "\e[33mComandi mancanti: ${MISSING_CMDS[*]}\e[0m"
+    echo -e "\e[33mPacchetti mancanti: ${MISSING_CMDS[*]}\e[0m"
 
     if [ "$(id -u)" -eq 0 ]; then
         install_packages
@@ -106,14 +116,14 @@ main() {
         check_missing_cmds
         print_status
         if [ ${#MISSING_CMDS[@]} -eq 0 ]; then
-            echo -e "\e[32mInstallazione completata con successo!\e[0m"
+            echo -e "\e[32mInstallazione completata!\e[0m"
             exit 0
         else
-            echo -e "\e[31mAlcuni comandi risultano ancora mancanti: ${MISSING_CMDS[*]}\e[0m" >&2
+            echo -e "\e[31mNon sono riuscito a installare: ${MISSING_CMDS[*]}\e[0m" >&2
             exit 1
         fi
     else
-        echo -e "\nPer installare tutto automaticamente, lancia:"
+        echo -e "\nPer installare tutto da solo lancia:"
         echo -e "  \e[36msudo ./requirements.sh\e[0m"
         exit 1
     fi

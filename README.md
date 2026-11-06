@@ -9,70 +9,93 @@ Evoluzione di [Backup_script_Umano](https://github.com/Neniku/Backup_script_Uman
 <a name="italiano"></a>
 ## Italiano
 
-Cyborg nasce da Umano: stessa logica di base a 5 parametri, ma con tutti i requisiti di sicurezza avanzata della traccia Cyborg. Cifratura simmetrica reale **AES-256** dei volumi `.zip` (estraibili anche da Windows), verifica dell'integrità tramite hash **SHA-256**, manifesto completo dei file salvato in **`diario-backup.log`**, upload ridondante su due destinazioni distinte (**SFTP con chiavi crittografiche ECC** + **SMB con firma digitale obbligatoria** e negoziazione automatica SMB3/SMB2), report HTML + allegato `diario-backup.log` inviati via email (`curl SMTP` o MTA locale) e protezione cifrata dei log locali.
+Cyborg nasce da Umano: stessa logica di base a 5 parametri, ma con tutto quello che serviva per la versione avanzata. Cifratura reale **AES-256** dei volumi `.zip` (tramite `7z`), verifica dell'integrità tramite hash **SHA-256**, elenco completo dei file salvati dentro **`diario-backup.log`**, upload ridondante su due destinazioni (**SFTP con chiavi ECC** + **SMB con firma digitale**), report HTML + allegato `diario-backup.log` inviati via email (`curl SMTP` o mail locale) e protezione dei log locali in uno `.zip` con password personale.
 
 ---
 
 ### Cosa fa
 
-1. Verifica all'avvio che tutte le dipendenze siano installate sul client (tramite `check_requirements` / `requirements.sh`)
-2. Registra l'elenco ricorsivo completo di tutti i file e le directory in **`diario-backup.log`** e archivia la directory sorgente (`param1`) in uno o più volumi `.zip` cifrati in **AES-256** con password complessa a 24 caratteri generata a runtime (4 maiuscole, 4 minuscole, 4 cifre, 4 simboli + 8 misti mescolati con CSPRNG)
-3. Calcola gli hash **SHA-256** per ogni volume generato
-4. Carica gli archivi in modo ridondante su **SFTP** (autenticazione tramite chiavi ECC `Ed25519`/`ECDSA` o password) e su **SMB** (connessione firmata digitalmente `--signing=required`, retrocompatibile SMB3/SMB2)
-5. Elimina automaticamente gli archivi temporanei rimasti sul client subito dopo l'upload
-6. Genera un report HTML autonomo e lo invia via email al sysadmin allegando **`diario-backup.log`** (tramite `curl SMTP` diretto o client locale)
-7. Protegge e archivia il report e `diario-backup.log` in un archivio `.zip` cifrato (`LOG_PASSWORD`) in `~/.backup_logs/`
+1. Controlla all'avvio che tutti i pacchetti necessari siano presenti sul client (tramite `requirements.sh`)
+2. Salva l'elenco ricorsivo di tutti i file e le cartelle in **`diario-backup.log`** e comprime la directory sorgente in uno o più volumi `.zip` cifrati in **AES-256** con password casuale a 24 caratteri generata al momento
+3. Calcola gli hash **SHA-256** per ogni volume creato
+4. Carica il backup su **SFTP** (con chiave SSH ECC `Ed25519`/`ECDSA` o password) e su **SMB** (con firma digitale dei pacchetti attiva e compatibilità SMB3/SMB2)
+5. Cancella subito gli archivi `.zip` temporanei rimasti sul client appena finito l'upload
+6. Genera il report HTML e lo invia via email al sysadmin allegando **`diario-backup.log`**
+7. Salva una copia locale di log e report in `~/.backup_logs/` dentro uno `.zip` protetto da `LOG_PASSWORD`
 
 ---
 
-### Funzionalità
+### Requisiti e perché servono
 
-| Funzionalità | Dettagli |
-|---|---|
-| Verifica Requisiti | Script `requirements.sh` per verifica e installazione automatica (`sudo ./requirements.sh`) |
-| Cifratura archivi | ZIP AES-256 (`7z -tzip -mem=AES256` / fallback `zip`) con password complessa a 24 caratteri generata a runtime |
-| Diario del backup | Manifesto completo di file e directory salvato in `diario-backup.log` e allegato all'email per il sysadmin |
-| Integrità | Hash SHA-256 calcolato per ogni volume e incluso nel report |
-| Ridondanza & Protocolli | Upload simultaneo SFTP (chiavi ECC `Ed25519`/`ECDSA`) + SMB (firma digitale `--signing=required`, SMB3/SMB2), oppure singolo (`ftp`/`sftp`/`smb`) |
-| Pulizia Client | Rimozione immediata e tracciata dei volumi locali al termine dell'upload |
-| Protezione log locali | Log e report archiviati in uno `.zip` protetto da password in `~/.backup_logs/` |
-| Concorrenza & UI | Lock file contro esecuzioni simultanee; interfaccia CLI e GUI (Zenity) |
-
----
-
-### Installazione Requisiti e Utilizzo
+Prima di usare lo script puoi verificare o installare tutto in automatico con:
 
 ```bash
-# 1. Verifica (o installa automaticamente con sudo) tutte le dipendenze sul client:
-./requirements.sh
-sudo ./requirements.sh
+./requirements.sh          # Controlla cosa c'è e cosa manca
+sudo ./requirements.sh     # Installa da solo i pacchetti mancanti
+```
 
-# 2. Configurazione raccomandata (senza credenziali in chiaro a riga di comando):
-cp secrets/config.env.example secrets/config.env
-# Modifica secrets/config.env con i tuoi parametri (il file è ignorato da git)
+Ecco perché lo script richiede ciascun componente sul client:
 
-# 3. Esecuzione (carica automaticamente secrets/config.env se presente)
+| Comando | A cosa serve nello script |
+|---|---|
+| `7z` | Crea archivi `.zip` cifrati con vero algoritmo **AES-256** (`-tzip -mem=AES256`), li divide in più volumi se superano la dimensione massima e cifra i log locali (al posto del vecchio `zip` che usava ZipCrypto) |
+| `sha256sum` | Calcola il checksum SHA-256 di ogni volume `.zip` per verificare che i file non siano corrotti |
+| `sftp` / `scp` | Creano la cartella sul server remoto e trasferiscono i volumi tramite SSH |
+| `ssh-keygen` | Controlla la chiave SSH locale per verificare nei log che sia una chiave ECC (`Ed25519` o `ECDSA`), fa già parte di OpenSSH |
+| `sshpass` | Serve quando si usa SFTP con password invece della chiave SSH (modalità Umana), perché `sftp` e `scp` di base non accettano password passate da script |
+| `smbclient` | Carica i volumi sulla cartella condivisa SMB/Windows attivando la firma digitale dei pacchetti (`--signing=required`) |
+| `curl` | Permette di inviare l'email col report e il log collegandosi direttamente a un server SMTP esterno (es. Gmail), senza dover configurare un server di posta locale |
+| `zenity` | Mostra le finestre grafiche quando si lancia lo script con `--gui` |
+
+---
+
+### Come configurare `secrets/config.env`
+
+Per non dover reinserire ogni volta IP, utente, password o email a mano (e senza mai rischiare di caricare dati personali su GitHub), lo script legge automaticamente il file `secrets/config.env`.
+
+1. Copia il file di esempio già pronto nella cartella `secrets/`:
+   ```bash
+   cp secrets/config.env.example secrets/config.env
+   ```
+2. Apri `secrets/config.env` con un editor di testo (`nano secrets/config.env` o VS Code) e compila le variabili che ti servono:
+   ```env
+   SOURCE_DIR="/home/tuo_utente/Documenti"
+   DEST_SERVER="192.168.1.100"
+   REMOTE_USER="backup_user"
+   CYBORG_PASS="tua_password_server"
+   PROTOCOL_MODE="both"
+   SSH_KEY_PATH="/home/tuo_utente/.ssh/id_ed25519"
+   SMB_PATH="/backup"
+   SMB_SIGNING="required"
+   SYSADMIN_EMAIL="tua_email@esempio.it"
+   LOG_PASSWORD="password_per_aprire_i_log_locali"
+
+   # Opzionali per inviare l'email con curl (es. App Password di Gmail):
+   SMTP_SERVER="smtp.gmail.com"
+   SMTP_PORT="587"
+   SMTP_USER="tua_email@gmail.com"
+   SMTP_PASS="xxxx xxxx xxxx xxxx"
+   ```
+3. Chiudi e salva (consigliato dare `chmod 600 secrets/config.env`).
+   La cartella `secrets/config.env` è già dentro `.gitignore`, quindi Git la ignorerà sempre. Quando lanci `./Backup_Cyborg.sh`, lo script trova da solo `secrets/config.env`, carica tutte le impostazioni compilate e ti chiede solo quelle che hai eventualmente lasciato vuote.
+
+---
+
+### Utilizzo
+
+```bash
+# Esecuzione normale (legge da solo secrets/config.env se esiste)
 ./Backup_Cyborg.sh --cli
 ./Backup_Cyborg.sh --gui
 
-# Oppure con i 5 parametri posizionali (compatibile sia con traccia Umana che Cyborg):
-./Backup_Cyborg.sh /path/to/source <ip_server> <utente> <password> <ftp|sftp|smb|both|email> [email]
+# Oppure passando i 5 parametri da riga di comando:
+./Backup_Cyborg.sh /path/sorgente <ip_server> <utente> <password> <ftp|sftp|smb|both|email> [email]
 
 # Altre opzioni
 ./Backup_Cyborg.sh --help
+./Backup_Cyborg.sh --version
 ./Backup_Cyborg.sh --cleanup-locks
 ```
-
-> Evitare di passare la password direttamente da riga di comando in produzione — può apparire nella history della shell. Preferire l'uso di `secrets/config.env`, l'autenticazione a chiave SSH ECC (`SSH_KEY_PATH`) o le variabili d'ambiente (`CYBORG_PASS`).
-
----
-
-### Note di sicurezza
-
-- La password di cifratura del backup è generata a runtime a 24 caratteri con CSPRNG (`/dev/urandom`) e mai salvata in chiaro nei log.
-- L'autenticazione SFTP rileva e privilegia chiavi crittografiche ECC (`id_ed25519`, `id_ecdsa`) in batch mode.
-- Le connessioni SMB impongono la firma digitale obbligatoria dei pacchetti (`--signing=required`), negoziano automaticamente SMB3/SMB2 e passano la password tramite variabile d'ambiente `PASSWD` (invisibile in `ps aux`).
-- I log (`diario-backup.log`) e il report locali vengono cifrati in AES-256 tramite `LOG_PASSWORD` in `~/.backup_logs/`.
 
 ---
 
@@ -85,29 +108,23 @@ MIT — see [LICENSE](./LICENSE)
 <a name="english"></a>
 ## English
 
-Cyborg is the hardened evolution of Umano: same 5-parameter foundation, extended with all advanced Cyborg security requirements. True **AES-256** symmetric encryption of `.zip` volumes (extractable on Windows), **SHA-256** integrity verification, complete file and directory manifest logged in **`diario-backup.log`**, redundant dual upload (**SFTP with ECC cryptographic keys** + **digitally signed SMB** with automatic SMB3/SMB2 negotiation), standalone HTML report + `diario-backup.log` attachment sent via email (direct `curl SMTP` or local MTA), and encrypted local log archiving.
+Cyborg is the evolution of Umano: same 5-parameter logic, extended with true **AES-256** `.zip` encryption (via `7z`), **SHA-256** integrity hashes, full file manifest inside **`diario-backup.log`**, redundant dual upload (**SFTP with ECC keys** + **SMB with digital signing**), HTML report + `diario-backup.log` attachment sent via email (`curl SMTP` or local MTA), and password-protected local log archiving.
 
----
-
-### Usage
+### Setup & Usage
 
 ```bash
-# 1. Check or automatically install all required packages on the client:
+# 1. Check or install dependencies automatically:
 ./requirements.sh
 sudo ./requirements.sh
 
-# 2. Recommended setup (no credentials in CLI args):
+# 2. Configure local secrets (ignored by Git):
 cp secrets/config.env.example secrets/config.env
-# Edit secrets/config.env with your parameters (the file is ignored by git)
+nano secrets/config.env
 
-# 3. Run (automatically sources secrets/config.env if present)
+# 3. Run:
 ./Backup_Cyborg.sh --cli
 ./Backup_Cyborg.sh --gui
 
-# Or pass positional arguments:
+# Or via positional arguments:
 ./Backup_Cyborg.sh /path/to/source <server_ip> <user> <password> <ftp|sftp|smb|both|email> [email]
-
-# Other flags
-./Backup_Cyborg.sh --help
-./Backup_Cyborg.sh --cleanup-locks
 ```
