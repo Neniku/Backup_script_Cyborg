@@ -346,9 +346,9 @@ exec_ssh_tool() {
     shift
     resolve_ecc_ssh_key
     SSH_COMMON_OPTS=(
-        -o StrictHostKeyChecking=accept-new
-        -o ConnectTimeout="$CONNECTION_TIMEOUT"
-        -o PubkeyAcceptedAlgorithms=+ssh-ed25519,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521
+        -o "StrictHostKeyChecking=accept-new"
+        -o "ConnectTimeout=$CONNECTION_TIMEOUT"
+        -o "PubkeyAcceptedAlgorithms=+ssh-ed25519,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521"
     )
     if [ -n "${SSH_KEY_PATH:-}" ] && [ -f "${SSH_KEY_PATH}" ]; then
         SSH_COMMON_OPTS+=(-i "$SSH_KEY_PATH" -o BatchMode=yes)
